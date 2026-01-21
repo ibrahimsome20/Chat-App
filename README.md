@@ -21,7 +21,11 @@ The app is designed to demonstrate:
 - Clean and modern chat interface
 
 ## Screenshots
-![Chat App Screenshot](./Screenshot/chat-app.png)
+![Chat App Screenshot](./Screenshot/1.png)
+![Chat App Screenshot](./Screenshot/2.png)
+![Chat App Screenshot](./Screenshot/3.png)
+![Chat App Screenshot](./Screenshot/4.png)
+![Chat App Screenshot](./Screenshot/5.png)
 
 
 
