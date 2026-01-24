@@ -17,6 +17,10 @@ const UserSchema=new mongoose.Schema({
         minlength:[6,'min lenght is 6'],
         select:false
     },
+    avatar:{
+        type:String,
+        default:null
+    },
     isAdmin:{
         type:Boolean,
         default:false

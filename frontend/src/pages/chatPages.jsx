@@ -61,7 +61,7 @@ const ChatPage = () => {
             </div>
           )}
 
-          {allmessage.map((msg) => {
+          {allmessage?.map((msg) => {
             // Robust check for sender name
             const isMe = msg.senderId?._id === user?._id || msg.senderId === user?._id || msg.senderId?.name === user?.name;
 

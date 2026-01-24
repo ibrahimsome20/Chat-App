@@ -7,7 +7,7 @@ import { isAxiosError } from 'axios'
 
 
 
-const userStore = create((set) => ({
+const userStore = create((set,get) => ({
 
   isSignIn: false,
   isLogin: false,
@@ -15,6 +15,7 @@ const userStore = create((set) => ({
   user: null,
   loading: false,
   isLogout: false,
+  isUpdateProfilePic:false,
 
   signIn: async (data) => {
     set({ isSignIn: true, loading: true })
@@ -96,6 +97,43 @@ const userStore = create((set) => ({
       set({ user: null, isLogout: false })
     }
   }
+  ,
+  updateProfilePic: async (file) => {
+  set({ isUpdateProfilePic: true });
+
+  try {
+    const formData = new FormData();
+    formData.append("avatar", file);
+
+    const res = await api.patch(
+      "/updateProfile",
+      formData,
+      {
+        headers: { "Content-Type": "multipart/form-data" },
+      }
+    );
+
+    toast.success("Profile picture updated");
+
+    // تحديث user مباشرة
+    set({
+      user: {
+        ...get().user,
+        avatar: res.data.avatar,
+      },
+    });
+
+    return res.data;
+  } catch (error) {
+    toast.error(
+      error.response?.data?.message || "Upload failed"
+    );
+  } finally {
+    set({ isUpdateProfilePic: false });
+  }
+  },
+
+
 
 
 

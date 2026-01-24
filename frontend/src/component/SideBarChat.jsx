@@ -6,7 +6,7 @@ import { useNavigate, useLocation } from "react-router-dom";
 
 function SideBarChat({ children }) {
   const [preview, setPreview] = useState(null);
-  const { isAuthenticated, user, logout, isLogout } = userStore();
+  const { isAuthenticated, user, logout, isLogout,updateProfilePic } = userStore();
   const imageRef = useRef(null);
   const navigate = useNavigate();
   const location = useLocation();
@@ -17,9 +17,11 @@ function SideBarChat({ children }) {
 
   const handleLogout = () => logout();
   const handleClickImage = () => imageRef.current.click();
-  const handleFile = (e) => {
+  const handleFile = async(e) => {
     const file = e.target.files[0];
     if (file) setPreview(URL.createObjectURL(file));
+     await updateProfilePic(file)
+    
   };
 
   const menuItems = [
@@ -47,7 +49,7 @@ function SideBarChat({ children }) {
               onChange={handleFile}
             />
             <img
-              src={preview || imageChat}
+              src={preview || user?.avatar || imageChat}
               alt="profile"
               className="w-full h-full object-cover"
             />
