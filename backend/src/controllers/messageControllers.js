@@ -1,3 +1,4 @@
+import mongoose from "mongoose"
 import Message from "../models/message.model.js"
 import User from "../models/user.modules.js"
 
@@ -7,12 +8,16 @@ export const sendMessage = async (req, res) => {
     const { text, imageMessage } = req.body
     try {
         if (!text && !imageMessage) {
-            res.status(400).json({ message: "message couldn't send empty" })
+            return res.status(400).json({ message: "message couldn't send empty" })
+        }
+
+        if (!mongoose.Types.ObjectId.isValid(recivedId)) {
+            return res.status(400).json({ message: "invalid user id" })
         }
 
         const findRecivedUser = await User.findById(recivedId)
         if (!findRecivedUser) {
-            res.status(400).json({ message: "thise user is not in data base" })
+            return res.status(400).json({ message: "thise user is not in data base" })
         }
         const newMessage = await Message.create({
             senderId,
@@ -69,18 +74,18 @@ export const getAlluser = async (req, res) => {
 export const getContactMessage = async (req, res) => {
     const { userId } = req
     const reciveduserId = req.params.id
-    console.log(userId, reciveduserId)
     try {
+        if (!mongoose.Types.ObjectId.isValid(reciveduserId)) {
+            return res.status(400).json({ message: "invalid user id" })
+        }
         const messages = await Message.find({
             $or: [{ senderId: userId, recivedId: reciveduserId },
             { senderId: reciveduserId, recivedId: userId }
             ]
         }).populate("senderId recivedId", "name ")
-        if (messages) {
-            res.status(200).json(messages)
-        }
+        res.status(200).json(messages)
     } catch (error) {
-        console.log(error?.message)
+        res.status(500).json({ message: "server don't respond" })
     }
 }
 

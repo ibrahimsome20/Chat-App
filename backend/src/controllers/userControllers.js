@@ -1,15 +1,23 @@
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
 import User from "../models/user.modules.js";
+import { createAndSendOtp, verifyOtp } from "../services/otp.service.js";
+
+const isProd = process.env.NODE_ENV === "production";
+
+// In production the frontend (Vercel) and API (Render) are on different
+// domains, so the auth cookie must be SameSite=None + Secure to be sent
+// cross-site. Locally we keep SameSite=Strict over http.
+const baseCookieOptions = {
+  httpOnly: true,
+  secure: isProd,
+  sameSite: isProd ? "none" : "strict",
+};
 
 /* ================= SIGN UP ================= */
 export const signUp = async (req, res) => {
   try {
     const { name, email, password } = req.body;
-
-    if (!name || !email || !password) {
-      return res.status(400).json({ message: "All fields are required" });
-    }
 
     const userExists = await User.findOne({ email });
     if (userExists) {
@@ -24,15 +32,104 @@ export const signUp = async (req, res) => {
       password: hashedPassword,
     });
 
+    // send the email-verification OTP
+    await createAndSendOtp(email, "verify");
+
     res.status(201).json({
-      message: "User created successfully",
+      message: "User created. Check your email for a verification code.",
       user: {
         id: user._id,
         name: user.name,
         email: user.email,
+        isVerified: user.isVerified,
         createdAt: user.createdAt,
       },
     });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+/* ================= VERIFY EMAIL ================= */
+export const verifyEmail = async (req, res) => {
+  try {
+    const { email, code } = req.body;
+
+    const result = await verifyOtp(email, code, "verify");
+    if (!result.ok) {
+      return res.status(400).json({ message: result.reason });
+    }
+
+    const user = await User.findOneAndUpdate(
+      { email },
+      { isVerified: true },
+      { new: true }
+    );
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    res.status(200).json({ message: "Email verified successfully" });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+/* ================= RESEND OTP ================= */
+export const resendOtp = async (req, res) => {
+  try {
+    const { email, type } = req.body;
+
+    const user = await User.findOne({ email });
+    // Always respond the same way so we don't leak which emails exist.
+    if (user && !(type === "verify" && user.isVerified)) {
+      await createAndSendOtp(email, type);
+    }
+
+    res.status(200).json({ message: "If the account exists, a code has been sent." });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+/* ================= FORGOT PASSWORD ================= */
+export const forgotPassword = async (req, res) => {
+  try {
+    const { email } = req.body;
+
+    const user = await User.findOne({ email });
+    if (user) {
+      await createAndSendOtp(email, "reset");
+    }
+
+    // Don't reveal whether the email is registered.
+    res.status(200).json({ message: "If the account exists, a reset code has been sent." });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+/* ================= RESET PASSWORD ================= */
+export const resetPassword = async (req, res) => {
+  try {
+    const { email, code, newPassword } = req.body;
+
+    const result = await verifyOtp(email, code, "reset");
+    if (!result.ok) {
+      return res.status(400).json({ message: result.reason });
+    }
+
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
+    const user = await User.findOneAndUpdate(
+      { email },
+      { password: hashedPassword },
+      { new: true }
+    );
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    res.status(200).json({ message: "Password reset successfully" });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
@@ -42,20 +139,22 @@ export const signUp = async (req, res) => {
 export const login = async (req, res) => {
   try {
     const { email, password } = req.body;
-    
-    if (!email || !password) {
-        return res.status(400).json({ message: "Email and password required" });
-    }
-    
-    const user = await User.findOne({ email }).select({password:1});
+
+    const user = await User.findOne({ email }).select("+password");
     if (!user) {
         return res.status(401).json({ message: "Invalid credentials" });
     }
-    
+
     const isMatch = await bcrypt.compare(password, user.password);
-    console.log('here')
     if (!isMatch) {
         return res.status(401).json({ message: "Invalid credentials" });
+    }
+
+    if (!user.isVerified) {
+        return res.status(403).json({
+            message: "Please verify your email before logging in",
+            needsVerification: true,
+        });
     }
 
     const token = jwt.sign(
@@ -65,9 +164,7 @@ export const login = async (req, res) => {
     );
 
     res.cookie("token", token, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: "strict",
+      ...baseCookieOptions,
       maxAge: 7 * 24 * 60 * 60 * 1000,
     });
 
@@ -87,9 +184,7 @@ export const login = async (req, res) => {
 /* ================= LOGOUT ================= */
 export const logout = (req, res) => {
   res.cookie("token", "", {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
-    sameSite: "strict",
+    ...baseCookieOptions,
     expires: new Date(0),
   });
 

@@ -14,12 +14,16 @@ const UserSchema=new mongoose.Schema({
     password:{
         type:String,
         required:[true,'enter password'],
-        minlength:[6,'min lenght is 6'],
+        minlength:[8,'min lenght is 8'],
         select:false
     },
     avatar:{
         type:String,
         default:null
+    },
+    isVerified:{
+        type:Boolean,
+        default:false
     },
     isAdmin:{
         type:Boolean,
