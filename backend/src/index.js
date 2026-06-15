@@ -29,7 +29,7 @@ const app=express()
 
 app.use(helmet())
 app.use(cors({
-    origin:'https://chat-app-six-beta-68.vercel.app/',
+    origin:'https://chat-app-six-beta-68.vercel.app',
     credentials:true,
 }))
 app.use(morgan('dev'))
