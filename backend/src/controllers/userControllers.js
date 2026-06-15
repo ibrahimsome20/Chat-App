@@ -114,24 +114,44 @@ const {userId}=req
 
 export const updateProfile = async (req, res) => {
   try {
-    const {userId} = req;
+    const { userId } = req;
+    // multer parses text fields from the multipart body into req.body
+    const { name, password } = req.body;
 
-    if (!req.file) {
-      return res.status(400).json({ message: "No image uploaded" });
+    const updates = {};
+
+    if (typeof name === "string" && name.trim()) {
+      updates.name = name.trim();
     }
 
-    const user = await User.findByIdAndUpdate(
-      userId,
-      { avatar: req.file.path },
-      { new: true }
-    );
+    if (typeof password === "string" && password) {
+      if (password.length < 8) {
+        return res
+          .status(400)
+          .json({ message: "Password must be at least 8 characters" });
+      }
+      updates.password = await bcrypt.hash(password, 10);
+    }
+
+    if (req.file) {
+      updates.avatar = req.file.path;
+    }
+
+    if (Object.keys(updates).length === 0) {
+      return res.status(400).json({ message: "Nothing to update" });
+    }
+
+    const user = await User.findByIdAndUpdate(userId, updates, {
+      new: true,
+      runValidators: true,
+    });
 
     if (!user) {
       return res.status(404).json({ message: "User not found" });
     }
 
     res.json({
-      message: "Profile image updated successfully",
+      message: "Profile updated successfully",
       avatar: user.avatar,
       user,
     });

@@ -16,6 +16,7 @@ const userStore = create((set,get) => ({
   loading: false,
   isLogout: false,
   isUpdateProfilePic:false,
+  isUpdateProfile:false,
 
   signIn: async (data) => {
     set({ isSignIn: true, loading: true })
@@ -131,6 +132,29 @@ const userStore = create((set,get) => ({
   } finally {
     set({ isUpdateProfilePic: false });
   }
+  },
+
+  updateProfile: async ({ name, password }) => {
+    set({ isUpdateProfile: true });
+
+    try {
+      const formData = new FormData();
+      if (name) formData.append("name", name);
+      if (password) formData.append("password", password);
+
+      const res = await api.patch("/updateProfile", formData, {
+        headers: { "Content-Type": "multipart/form-data" },
+      });
+
+      toast.success(res.data.message || "Profile updated");
+      set({ user: res.data.user });
+
+      return res.data;
+    } catch (error) {
+      toast.error(error.response?.data?.message || "Update failed");
+    } finally {
+      set({ isUpdateProfile: false });
+    }
   },
 
 
