@@ -1,8 +1,12 @@
+// MUST be imported first so Sentry can instrument everything below.
+import Sentry from './instrument.js'
+
 import express ,{json} from 'express'
 import dotenv from 'dotenv'
 import morgan from 'morgan'
 import cookieParser from 'cookie-parser'
 import cors from 'cors'
+import helmet from 'helmet'
 
 
 
@@ -23,6 +27,7 @@ const app=express()
  conectDB()
 //midllware
 
+app.use(helmet())
 app.use(cors({
     origin: process.env.CLIENT_URL || 'http://localhost:5173',
     credentials:true,
@@ -40,6 +45,8 @@ app.use(json())
 app.use('/api/v1',router)
 app.use('/api/',routerMessage)
 
+//Sentry error handler must be registered before our own error middleware
+Sentry.setupExpressErrorHandler(app)
 
 app.use(errorMiddleware)
 
