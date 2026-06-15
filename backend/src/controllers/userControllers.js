@@ -3,6 +3,17 @@ import jwt from "jsonwebtoken";
 import User from "../models/user.modules.js";
 import { createAndSendOtp, verifyOtp } from "../services/otp.service.js";
 
+const isProd = process.env.NODE_ENV === "production";
+
+// In production the frontend (Vercel) and API (Render) are on different
+// domains, so the auth cookie must be SameSite=None + Secure to be sent
+// cross-site. Locally we keep SameSite=Strict over http.
+const baseCookieOptions = {
+  httpOnly: true,
+  secure: isProd,
+  sameSite: isProd ? "none" : "strict",
+};
+
 /* ================= SIGN UP ================= */
 export const signUp = async (req, res) => {
   try {
@@ -153,9 +164,7 @@ export const login = async (req, res) => {
     );
 
     res.cookie("token", token, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: "strict",
+      ...baseCookieOptions,
       maxAge: 7 * 24 * 60 * 60 * 1000,
     });
 
@@ -175,9 +184,7 @@ export const login = async (req, res) => {
 /* ================= LOGOUT ================= */
 export const logout = (req, res) => {
   res.cookie("token", "", {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
-    sameSite: "strict",
+    ...baseCookieOptions,
     expires: new Date(0),
   });
 

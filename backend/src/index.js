@@ -51,7 +51,7 @@ Sentry.setupExpressErrorHandler(app)
 app.use(errorMiddleware)
 
 //server running and db
-const PORT=process.env.PORT_Server || 3000
+const PORT=process.env.PORT || process.env.PORT_Server || 3000
 app.listen(PORT,()=>{
   
     console.log(`server running in port ${PORT}....`)
